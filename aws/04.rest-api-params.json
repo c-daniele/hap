@@ -1,0 +1,33 @@
+[
+    {
+        "ParameterKey": "APIName",
+        "ParameterValue": "simpleHomeAlarmApi"
+    }, 
+    {
+        "ParameterKey": "CognitoStackParameter",
+        "ParameterValue": "simple-home-alarm-resources-cognito"
+    }, 
+    {
+        "ParameterKey": "IotStackParameter",
+        "ParameterValue": "simple-home-alarm-resources-iot"
+    }, 
+    {
+        "ParameterKey": "IOTSubdomain",
+        "ParameterValue": "<MY_IOT_ENDPOINT>-ats"
+    }, 
+    {
+        "ParameterKey": "IotOutputTopic",
+        "ParameterValue": "esp32/pub"
+    }, 
+    {
+        "ParameterKey": "IotInputTopic",
+        "ParameterValue": "esp32/sub"
+    }, 
+    {
+        "ParameterKey": "DynamoTableName",
+        "ParameterValue": "simpleAlarmStatusTable"
+    }
+]
+
+
+

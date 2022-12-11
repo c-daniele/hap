@@ -1,0 +1,6 @@
+[
+    {
+        "ParameterKey": "IoTCertName",
+        "ParameterValue": "<my_cert_name>"
+    }
+]

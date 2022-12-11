@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  SubscriptionEmail:
+    Type: String
+    Description: Enter the subscribed email address
+Resources:
+  AlarmSnsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: "SimpleHomeAlarmSns"
+      Tags: 
+        - Key: "project"
+          Value: "SimpleHomeAlarm"
+        - Key: "Env"
+          Value: "Test"
+      Subscription:
+        - Endpoint: {"Ref": "SubscriptionEmail"}
+          Protocol: email
+
+## Env vars
+#AWS_PROFILE=<MY_PROFILE>
+
+## Cli command to publish the stack
+#aws --profile $AWS_PROFILE cloudformation delete-stack --stack-name simple-home-alarm-resources-sns
+#aws --profile $AWS_PROFILE cloudformation create-stack --stack-name simple-home-alarm-resources-sns --template-body file://01.sns.yaml --parameters file://./01.sns-params.json

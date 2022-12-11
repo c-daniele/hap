@@ -1,0 +1,10 @@
+[
+    {
+        "ParameterKey": "CognitoName",
+        "ParameterValue": "simpleCognito"
+    }, 
+    {
+        "ParameterKey": "CognitoDomain",
+        "ParameterValue": "simple-cognito-domain"
+    }
+]
