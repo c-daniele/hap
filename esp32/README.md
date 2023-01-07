@@ -29,7 +29,13 @@ There a lot of store online where you can buy such board.
 5. From VSCode Arduino Board Configuration, select the "ESP32 Wrover Module" from the available list
 ![](../resources/vscode-esp32-board-config.png)
 
-6. Connect the board to the PC via USB and select the serial port from VSCode
+6. Add the following libraries using the Arduino Library Manager:
+ - MQTT (by Joel Gaehwiler), Version 2.5.0
+ - ArduinoJson (by Benoit Blanchon) Version 6.20.0
+ - Time (by Michael Margolis), Version 1.6.1 
+ - Logger (by Christopher Baker), Version 1.0.3
+
+7. Connect the board to the PC via USB and select the serial port from VSCode
    Sometimes you could experience some "*permission denied*" issues. If you search online, you should easily find a solution for such issues.
 
-7. Build and upload the code to the ESP32 Device
+8. Build and upload the code to the ESP32 Device
