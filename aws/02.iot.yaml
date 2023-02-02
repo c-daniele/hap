@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  IoTThingName:
+    Type: String
+    Default: SimpleHomeAlarm_Esp32Thing
+  IoTTopic:
+    Type: String
+    Default: esp32
+  IotOutputTopic:
+    Type: String
+    Default: esp32/pub
+  IotInputTopic:
+    Type: String
+    Default: esp32/sub
+  IoTCertName:
+    Type: String
+  IoTPolicyName:
+    Type: String
+    Default: SimpleHomeAlarmPolicy
+Resources:
+  IoTCoreHomeAlarmThing:
+    Type: AWS::IoT::Thing
+    Properties:
+      ThingName: {"Ref" : "IoTThingName"}
+      #Tags: 
+      #  - Key: "PROJECT"
+      #    Value: "SimpleHomeAlarm"
+      #  - Key: "ENV"
+      #    Value: "Test"
+  IoTCoreHomeAlarmPolicy:
+    Type: AWS::IoT::Policy
+    Properties:
+      PolicyName: {"Ref": "IoTPolicyName"}
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action: iot:Connect
+          Resource:
+            Fn::Join: [ "", ["arn:aws:iot:", {"Ref" : "AWS::Region"}, ":", {"Ref" : "AWS::AccountId"}, ":client/", "*"] ]
+          Condition:
+            Bool:
+              'iot:Connection.Thing.IsAttached':
+                - 'true'
+        - Effect: Allow
+          Action: iot:Publish
+          Resource:
+            Fn::Join: [ "", ["arn:aws:iot:", {"Ref" : "AWS::Region"}, ":", {"Ref" : "AWS::AccountId"}, ":topic/", {"Ref" : "IotOutputTopic"}] ]
+        - Effect: Allow
+          Action: iot:Subscribe
+          Resource:
+            Fn::Join: [ "", ["arn:aws:iot:", {"Ref" : "AWS::Region"}, ":", {"Ref" : "AWS::AccountId"}, ":topicfilter/", {"Ref" : "IotInputTopic"}] ]
+        - Effect: Allow
+          Action: iot:Receive
+          Resource:
+            Fn::Join: [ "", ["arn:aws:iot:", {"Ref" : "AWS::Region"}, ":", {"Ref" : "AWS::AccountId"}, ":topic/", {"Ref" : "IotInputTopic"}] ]
+  IoTCoreHomeAlarmPolicyAttachment:
+    Type: AWS::IoT::PolicyPrincipalAttachment
+    Properties:
+      PolicyName: {"Ref": "IoTPolicyName"}
+      Principal:
+        Fn::Join: [ "", ["arn:aws:iot:", {"Ref" : "AWS::Region"}, ":", {"Ref" : "AWS::AccountId"}, ":cert/", {"Ref" : "IoTCertName"}] ]
+    DependsOn: IoTCoreHomeAlarmPolicy
+  IoTCoreHomeAlarmPrincipalAttachment:
+    Type: AWS::IoT::ThingPrincipalAttachment
+    Properties:
+      ThingName: {"Ref" : "IoTThingName"}
+      Principal:
+        Fn::Join: [ "", ["arn:aws:iot:", {"Ref" : "AWS::Region"}, ":", {"Ref" : "AWS::AccountId"}, ":cert/", {"Ref" : "IoTCertName"}] ]
+    DependsOn: IoTCoreHomeAlarmThing
+
+
+#Outputs:
+#  IotBackendRoleArn:
+#    Value: Fn::GetAtt IotBackendRole.Arn
+#    Export:
+#      Name: Fn::Sub ${AWS::StackName}-IotBackendRole-arn
+
+## Env vars
+#AWS_PROFILE=<MY_PROFILE>
+
+## Cli command to publish the stack
+# aws --profile $AWS_PROFILE cloudformation delete-stack --stack-name simple-home-alarm-resources-iot
+# aws --profile $AWS_PROFILE cloudformation create-stack --stack-name simple-home-alarm-resources-iot --template-body file://02.iot.yaml --parameters file://./02.iot-params.json

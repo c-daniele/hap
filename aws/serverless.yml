@@ -1,0 +1,131 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+params:
+  default:
+    dynamoStatusTableName: simpleAlarmStatusTable
+    # dynamoSensorTableName: simpleAlarmSensorTable
+    dynamoSensorHistoryTableName: simpleAlarmSensorHistoryTable
+    iotTopicPub: esp32/pub
+    iotTopicSub: esp32/sub
+    snsTopic: SimpleHomeAlarmSns
+
+service: aws
+# app and org for use with dashboard.serverless.com
+org: cdani
+app: aws
+#
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.9
+
+# you can overwrite defaults here
+  stage: dev
+  region: eu-west-1
+
+# you can define service wide environment variables here
+  environment:
+    dynamoStatusTableName: ${param:dynamoStatusTableName}
+    # dynamoSensorTableName: ${param:dynamoSensorTableName}
+    dynamoSensorHistoryTableName: ${param:dynamoSensorHistoryTableName}
+    iotTopicPub: ${param:iotTopicPub}
+    iotTopicSub: ${param:iotTopicSub}
+    snsTopic: ${param:snsTopic}
+
+functions:
+  alarmWatcherArmed:
+    handler: handler.manageArmedMode
+    role: alarmWatcherRole
+    events:
+      - iot:
+          sql: "SELECT * FROM '${param:iotTopicPub}' where status.alarmMode = 'ARMED'"
+  alarmWatcherOff:
+    handler: handler.manageOffMode
+    role: alarmWatcherRole
+    events:
+      - iot:
+          sql: "SELECT * FROM '${param:iotTopicPub}' where status.alarmMode = 'OFF'"
+  alarmWatcherMonitor:
+    handler: handler.manageMonitorMode
+    role: alarmWatcherRole
+    events:
+      - iot:
+          sql: "SELECT * FROM '${param:iotTopicPub}' where status.alarmMode = 'MONITOR'"
+  alarmWatcherSync:
+    handler: handler.manageSyncMode
+    role: alarmWatcherRole
+    events:
+      - iot:
+          sql: "SELECT * FROM '${param:iotTopicPub}' where status.alarmMode = 'SYNC'"
+
+#    Define function environment variables here
+#    environment:
+#      variable2: value2
+
+# you can add CloudFormation resource templates here
+resources:
+  Resources:
+    alarmWatcherRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: simpleAlarmWatcherRole
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        Policies:
+          - PolicyName: simpleAlarmWatcherPolicy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - 'dynamodb:Query'
+                    - 'dynamodb:Scan'
+                    - 'dynamodb:GetItem'
+                    - 'dynamodb:UpdateItem'
+                    - 'dynamodb:PutItem'
+                    - 'dynamodb:BatchWriteItem'
+                  Resource:
+                    - 'arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${param:dynamoStatusTableName}'
+                    # - 'arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${param:simpleAlarmSensorTable}'
+                    - 'arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${param:dynamoSensorHistoryTableName}'
+                - Effect: 'Allow'
+                  Action:
+                    - 'iot:Subscribe'
+                    - 'iot:Receive'
+                    - 'iot:Connect'
+                  Resource: 'arn:aws:iot:${aws:region}:${aws:accountId}:topic/${param:iotTopicPub}'
+                - Effect: 'Allow'
+                  Action:
+                    - 'iot:Connect'
+                    - 'iot:Publish'
+                  Resource: 'arn:aws:iot:${aws:region}:${aws:accountId}:topic/${param:iotTopicSub}'
+                - Effect: Allow
+                  Action:
+                    - 'iot:DescribeEndpoint'
+                  Resource: '*'
+                - Effect: 'Allow'
+                  Action:
+                    - 'sns:Publish'
+                  Resource: 'arn:aws:sns:${aws:region}:${aws:accountId}:${param:snsTopic}'

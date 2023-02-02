@@ -1,0 +1,287 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Cognito Stack
+Parameters:
+  APIName:
+    Type: String
+    #MinLength: 3
+    #MaxLength: 63
+    #AllowedPattern: ^[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?$
+    #Description: Enter a string. Must be alpha numeric 3-63 in length.
+  CognitoStackParameter:
+    Type: String
+  IotStackParameter:
+    Type: String
+  IOTSubdomain:
+    Type: String
+    Description: IOT Endpoint
+  IotOutputTopic:
+    Type: String
+  IotInputTopic:
+    Type: String
+  DynamoStatusTableName:
+    Type: String
+  # DynamoSensorTableName:
+  #   Type: String
+  DynamoSensorHistoryTableName:
+    Type: String
+
+Resources:
+    # Creates a user pool in cognito for your app to auth against
+    # This example requires MFA and validates the phone number to use as MFA
+    # Other fields can be added to the schema
+  SimpleAlarmStatusTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: {"Ref": "DynamoStatusTableName"}
+      AttributeDefinitions:
+        - AttributeName: iotTopic
+          AttributeType: S
+#          - AttributeName: status
+#            AttributeType: S
+#          - AttributeName: lastAlarmNotificationTms
+#            AttributeType: N
+#          - AttributeName: lastNotificationTms
+#            AttributeType: N
+      KeySchema:
+        - AttributeName: iotTopic
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+  SimpleAlarmSensorHistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: {"Ref": "DynamoSensorHistoryTableName"}
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: datetime
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: datetime
+          KeyType: RANGE
+      # ProvisionedThroughput:
+      #   NumberOfDecreasesToday: 0
+      #   ReadCapacityUnits: 0
+      #   WriteCapacityUnits: 0
+      # BillingModeSummary:
+      #   BillingMode: PAY_PER_REQUEST
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+  IotBackendRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: simpleHomeAlarmIotBackendRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Tags: 
+      - Key: "project"
+        Value: "SimpleHomeAlarm"
+      - Key: "Env"
+        Value: "Test"
+      Policies:
+        - PolicyName: simpleHomeAlarmIotBackendPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  #- 'iot:Receive'
+                  #- 'iot:Subscribe'
+                  - 'iot:Connect'
+                  - 'iot:Publish'
+                Resource:
+                  - Fn::Join: [ "", ["arn:aws:iot:", {"Ref" : "AWS::Region"}, ":", {"Ref" : "AWS::AccountId"}, ":topic/", {"Ref" : "IotInputTopic"}] ]
+  AlarmApiGetStatusRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: simpleHomeAlarmApiGetStatusRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Tags: 
+      - Key: "project"
+        Value: "SimpleHomeAlarm"
+      - Key: "Env"
+        Value: "Test"
+      Policies:
+        - PolicyName: simpleHomeAlarmApiGetStatusPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'dynamodb:ListTables'
+                Resource: '*'
+              - Effect: 'Allow'
+                Action:
+                  - 'dynamodb:Query'
+                  - 'dynamodb:Scan'
+                  - 'dynamodb:GetItem'
+                  - 'dynamodb:UpdateItem'
+                  - 'dynamodb:PutItem'
+                  - 'dynamodb:DescribeTable'
+                Resource:
+                  - Fn::Join: [ "", ["arn:aws:dynamodb:", {"Ref" : "AWS::Region"}, ":", {"Ref" : "AWS::AccountId"}, ":table/", {"Ref" : "DynamoStatusTableName"}] ]
+                  #- Fn::Join: [ "", ["arn:aws:dynamodb:", {"Ref" : "AWS::Region"}, ":", {"Ref" : "AWS::AccountId"}, ":table/", {"Ref" : "DynamoSensorTableName"}] ]
+                  - Fn::Join: [ "", ["arn:aws:dynamodb:", {"Ref" : "AWS::Region"}, ":", {"Ref" : "AWS::AccountId"}, ":table/", {"Ref" : "DynamoSensorHistoryTableName"}] ]
+  HomeAlarmAuthorizer:
+    Type: 'AWS::ApiGateway::Authorizer'
+    Properties:
+      Type: COGNITO_USER_POOLS
+      Name: CognitoAuthorizer
+      ProviderARNs:
+        - Fn::ImportValue: {"Fn::Sub" : "${CognitoStackParameter}-user-pool-arn"}
+      AuthType: cognito_user_pools
+      IdentitySource: method.request.header.Authorization
+      RestApiId: {"Ref": "HomeAlarmRestApi"}
+  HomeAlarmRestApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Name: {"Fn::Sub": "${APIName}-rest-api"}
+      ApiKeySourceType: HEADER
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Tags:
+        - Key: "project"
+          Value: "SimpleHomeAlarm"
+        - Key: "Env"
+          Value: "Test"
+      DisableExecuteApiEndpoint: false
+  HomeAlarmRestApiCommand:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: {"Ref" : "HomeAlarmRestApi"}
+      ParentId: {"Fn::GetAtt": "HomeAlarmRestApi.RootResourceId"}
+      PathPart: "homealarmcommand"
+  HomeAlarmRestApiStatus:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: {"Ref" : "HomeAlarmRestApi"}
+      ParentId: {"Fn::GetAtt": "HomeAlarmRestApi.RootResourceId"}
+      PathPart: "homealarmstatus"
+  HomeAlarmCommandMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      ResourceId: {"Ref" : "HomeAlarmRestApiCommand"}
+      RestApiId: {"Ref" : "HomeAlarmRestApi"}
+      HttpMethod: POST
+      AuthorizationType: AWS_IAM
+      #AuthorizationType: COGNITO_USER_POOLS
+      #AuthorizerId: {"Fn::GetAtt" : "HomeAlarmAuthorizer.AuthorizerId"}
+      ApiKeyRequired: false
+      RequestParameters:
+        method.request.querystring.qos: false
+        method.request.querystring.topic: false
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseModels:
+            application/json: Empty
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        #Uri: arn:aws:apigateway:eu-west-1:xxxxxxxxxxxxx-ats.iotdata:path/topics/esp32/sub
+        Uri:
+          Fn::Join: [ "", ["arn:aws:apigateway:", {"Ref" : "AWS::Region"}, ":", {"Ref" : "IOTSubdomain"}, ".iotdata:path/topics/", {"Ref": "IotInputTopic"}] ]
+        Credentials: {"Fn::GetAtt": "IotBackendRole.Arn"}
+        PassthroughBehavior: WHEN_NO_MATCH
+        ContentHandling: CONVERT_TO_TEXT
+        TimeoutInMillis: 29000
+        #CacheNamespace: 4j8mv9
+        IntegrationResponses:
+          - StatusCode: '200'
+  HomeAlarmStatusMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      ResourceId: {"Ref" : "HomeAlarmRestApiStatus"}
+      RestApiId: {"Ref" : "HomeAlarmRestApi"}
+      HttpMethod: POST
+      AuthorizationType: AWS_IAM
+      #AuthorizationType: COGNITO_USER_POOLS
+      #AuthorizerId: {"Fn::GetAtt": "HomeAlarmAuthorizer.AuthorizerId"}
+      ApiKeyRequired: false
+      RequestParameters:
+        method.request.querystring.qos: false
+        method.request.querystring.topic: false
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseModels:
+            application/json: Empty
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Join: [ "", ["arn:aws:apigateway:", {"Ref": "AWS::Region"}, ":dynamodb:action/GetItem"] ]
+        Credentials: {"Fn::GetAtt": "AlarmApiGetStatusRole.Arn"}
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        #CacheNamespace: oa4e6x
+        IntegrationResponses:
+          - StatusCode: '200'
+  HomeAlarmApisFirstDeploy:
+    Type: 'AWS::ApiGateway::Deployment'
+    DependsOn:
+      - HomeAlarmCommandMethod
+      - HomeAlarmStatusMethod
+    Properties:
+      RestApiId: {"Ref" : "HomeAlarmRestApi"}
+      Description: Home Alarms Apis first deploy
+  HomeAlarmStageTest:
+    Type: 'AWS::ApiGateway::Stage'
+    Properties:
+      RestApiId: {"Ref" : "HomeAlarmRestApi"}
+      DeploymentId: {"Ref": "HomeAlarmApisFirstDeploy"}
+      StageName: test
+      CacheClusterEnabled: false
+      #CacheClusterStatus: NOT_AVAILABLE
+      MethodSettings:
+        - ResourcePath: "/*"
+          HttpMethod: "*"
+          MetricsEnabled: false
+          LoggingLevel: INFO
+          DataTraceEnabled: true
+          ThrottlingBurstLimit: 5000
+          ThrottlingRateLimit: 10000
+          CachingEnabled: false
+          CacheTtlInSeconds: 300
+          CacheDataEncrypted: false
+          #RequireAuthorizationForCacheControl: true
+          #unauthorizedCacheControlHeaderStrategy: SUCCEED_WITH_RESPONSE_HEADER
+      TracingEnabled: false
+      Tags:
+        - Key: "project"
+          Value: "SimpleHomeAlarm"
+        - Key: "Env"
+          Value: "Test"
+
+## Env vars
+#AWS_PROFILE=<MY_PROFILE>
+
+## To get the IOT-ATS Endpoint
+# aws --profile $AWS_PROFILE iot describe-endpoint --endpoint-type iot:Data-ATS --output text
+
+## Cli command to publish the stack
+# aws --profile $AWS_PROFILE cloudformation delete-stack --stack-name simple-home-alarm-resources-restapi
+# aws --profile $AWS_PROFILE cloudformation create-stack --stack-name simple-home-alarm-resources-restapi --template-body file://04.rest-api.yaml --parameters file://./04.rest-api-params.json --capabilities CAPABILITY_NAMED_IAM
+
+
+# Put empty record
+#aws --profile $AWS_PROFILE dynamodb put-item \
+#    --table-name simpleAlarmStatusTable \
+#    --item \
+#        '{"iotTopic": {"S":"esp32/pub"},"lastAlarmNotificationTmsMs":{"N":"1663512656619"}, "alarmStatus":{"S": ""}, "alarmMode":{"S": "OFF"},"sensors":{"L":[{"M":{"alarm":{"BOOL":false},"lastCheck":{"N":"0"},"deviceCode":{"S":"PROX_1"},"value":{"S":"0.0000"},"enabled":{"BOOL":false}}},{"M":{"alarm":{"BOOL":false},"lastCheck":{"N":"0"},"deviceCode":{"S":"PROX_2"},"value":{"S":"0.0000"},"enabled":{"BOOL":false}}},{"M":{"alarm":{"BOOL":false},"lastCheck":{"N":"0"},"deviceCode":{"S":"PROX_3"},"value":{"S":"0.0000"},"enabled":{"BOOL":false}}},{"M":{"alarm":{"BOOL":false},"lastCheck":{"N":"0"},"deviceCode":{"S":"PROX_4"},"value":{"S":"0.0000"},"enabled":{"BOOL":false}}},{"M":{"alarm":{"BOOL":false},"lastCheck":{"N":"0"},"deviceCode":{"S":"PROX_5"},"value":{"S":"0.0000"},"enabled":{"BOOL":false}}},{"M":{"alarm":{"BOOL":false},"lastCheck":{"N":"71"},"deviceCode":{"S":"PIR_1"},"value":{"S":"2099.9433"},"enabled":{"BOOL":true}}},{"M":{"alarm":{"BOOL":false},"lastCheck":{"N":"0"},"deviceCode":{"S":"PIR_2"},"value":{"S":"0.0000"},"enabled":{"BOOL":false}}},{"M":{"alarm":{"BOOL":false},"lastCheck":{"N":"0"},"deviceCode":{"S":"PIR_3"},"value":{"S":"0.0000"},"enabled":{"BOOL":false}}}]}, "lastUpdateTmsMs":{"N":"1663512656619"}}'

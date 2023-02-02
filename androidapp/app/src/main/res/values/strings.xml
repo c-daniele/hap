@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">HomeAlarm</string>
+    <string name="prox_2_des">Finestra Sala - 2</string>
+    <string name="armed">Armato</string>
+    <string name="prox_2">PROX_2</string>
+    <string name="prox_3">PROX_3</string>
+    <string name="prox_3_des">Porta ingresso</string>
+    <string name="prox_4">PROX_4</string>
+    <string name="prox_4_des">Finestra cameretta</string>
+    <string name="prox_5">PROX_5</string>
+    <string name="prox_5_des">Finestra camera</string>
+    <string name="pir_1">PIR_1</string>
+    <string name="pir_1_des">PIR Sala</string>
+    <string name="pir_2">PIR_2</string>
+    <string name="pir_2_des">PIR Cameretta</string>
+    <string name="pir_3">PIR_3</string>
+    <string name="pir_3_des">PIR Camera</string>
+    <string name="submit">Invio</string>
+    <string name="refresh_status">Aggiorna stato</string>
+    <string name="last_sync">Ultimo messaggio:</string>
+    <string name="prox_1">PROX_1</string>
+    <string name="prox_1_des">Finestra Sala - 1</string>
+    <string name="textview">N/D</string>
+    <string name="statusTextND">N/D</string>
+    <string name="sensorHeaderLabel">Sensore</string>
+    <string name="sensorHeaderStatus">Stato</string>
+    <string name="lastUpdLabel">Ultimo messaggio MQTT:</string>
+    <string name="lastUpdateVal">N/D</string>
+    <string name="lastAlarmLabel">Ultimo allarme:</string>
+    <string name="lastAlarmVal">N/D</string>
+</resources>

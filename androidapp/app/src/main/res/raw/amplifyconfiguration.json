@@ -1,0 +1,44 @@
+{
+    "UserAgent": "aws-amplify-cli/2.0",
+    "Version": "1.0",
+    "api": {
+        "plugins": {
+            "awsAPIPlugin": {
+                "homeAlarmApi": {
+                    "endpointType": "REST",
+                    "endpoint": "https://<ENDPOINT>.execute-api.<REGION>.amazonaws.com/<STAGE>",
+                    "region": "<REGION>",
+                    "authorizationType": "AWS_IAM"
+                }
+            }
+        }
+    },
+    "auth": {
+        "plugins": {
+            "awsCognitoAuthPlugin": {
+                "UserAgent": "aws-amplify-cli/0.1.0",
+                "Version": "0.1.0",
+                "IdentityManager": {
+
+                    "Default": {}
+                },
+                "CredentialsProvider": {
+                    "CognitoIdentity": {
+                        "Default": {
+                            "PoolId": "<REGION>:<IDENTITY_POOL_ID>",
+                            "Region": "<REGION>"
+                        }
+                    }
+                },
+                "CognitoUserPool": {
+                    "Default": {
+                        "PoolId": "<REGION>_<USER_POOL_ID>",
+                        "AppClientId": "<APP_CLIENT_ID>",
+                        "Region": "<REGION>"
+                    }
+                }
+            }
+        }
+
+    }
+}

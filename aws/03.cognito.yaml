@@ -1,0 +1,360 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Cognito Stack
+Parameters:
+  CognitoName:
+    Type: String
+    Description: Enter a string. Must be alpha numeric 3-63 in length.
+  CognitoDomain:
+    Type: String
+    Description: Enter a string. Must be alpha numeric 3-63 in length.
+
+Resources:
+    # Creates a user pool in cognito for your app to auth against
+    # This example requires MFA and validates the phone number to use as MFA
+    # Other fields can be added to the schema
+  UserPool:
+    Type: 'AWS::Cognito::UserPool'
+    Properties:
+      UserPoolName: {"Fn::Sub": "${CognitoName}-user-pool"}
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: false
+          RequireLowercase: false
+          RequireNumbers: false
+          RequireSymbols: false
+          TemporaryPasswordValidityDays: 7
+      Schema:
+        - Name: sub
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: false
+          Required: true
+          StringAttributeConstraints:
+            MinLength: '1'
+            MaxLength: '2048'
+        - Name: name
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+              MinLength: '0'
+              MaxLength: '2048'
+        - Name: given_name
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+              MinLength: '0'
+              MaxLength: '2048'
+        - Name: family_name
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+              MinLength: '0'
+              MaxLength: '2048'
+        - Name: middle_name
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+              MinLength: '0'
+              MaxLength: '2048'
+        - Name: nickname
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+              MinLength: '0'
+              MaxLength: '2048'
+        - Name: preferred_username
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+              MinLength: '0'
+              MaxLength: '2048'
+        - Name: profile
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+              MinLength: '0'
+              MaxLength: '2048'
+        - Name: picture
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+              MinLength: '0'
+              MaxLength: '2048'
+        - Name: website
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+              MinLength: '0'
+              MaxLength: '2048'
+        - Name: email
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: true
+          StringAttributeConstraints:
+              MinLength: '0'
+              MaxLength: '2048'
+        - Name: email_verified
+          AttributeDataType: Boolean
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+        - Name: gender
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+              MinLength: '0'
+              MaxLength: '2048'
+        - Name: birthdate
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+              MinLength: '10'
+              MaxLength: '10'
+        - Name: zoneinfo
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+              MinLength: '0'
+              MaxLength: '2048'
+        - Name: locale
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+              MinLength: '0'
+              MaxLength: '2048'
+        - Name: phone_number
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+              MinLength: '0'
+              MaxLength: '2048'
+        #- Name: phone_number_verified
+        #  AttributeDataType: Boolean
+        #  DeveloperOnlyAttribute: false
+        #  Mutable: true
+        #  Required: false
+        - Name: address
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+              MinLength: '0'
+              MaxLength: '2048'
+        - Name: updated_at
+          AttributeDataType: Number
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          NumberAttributeConstraints:
+              MinValue: '0'
+      AutoVerifiedAttributes:
+        - email
+      EmailVerificationMessage: Your verification code is {####}
+      EmailVerificationSubject: Your verification code
+      VerificationMessageTemplate:
+        EmailMessage: Your verification code is {####}
+        EmailSubject: Your verification code
+        DefaultEmailOption: CONFIRM_WITH_CODE
+      MfaConfiguration: 'OFF'
+      #EstimatedNumberOfUsers: 1
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT
+      UserPoolTags:
+        project: "SimpleHomeAlarm"
+        Env: "Test"
+      #Domain: {"Ref": "CognitoDomain"}
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+        #UnusedAccountValidityDays: 7
+      UsernameConfiguration:
+        CaseSensitive: false
+    # Creates a User Pool Client to be used by the identity pool
+
+  UserPoolClient:
+    Type: 'AWS::Cognito::UserPoolClient'
+    Properties:
+      UserPoolId: {"Ref": "UserPool"}
+      ClientName: {"Fn::Sub": "${CognitoName}-client"}
+      RefreshTokenValidity: 30
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
+      ExplicitAuthFlows:
+        - ALLOW_CUSTOM_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_USER_SRP_AUTH
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURLs:
+        - https://myapp/signin
+      LogoutURLs:
+        - https://myapp/signout
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthScopes:
+        - aws.cognito.signin.user.admin
+        - email
+        - openid
+        - phone
+        - profile
+      AllowedOAuthFlowsUserPoolClient: true
+      PreventUserExistenceErrors: LEGACY
+      EnableTokenRevocation: true
+  
+  SimpleCognitoAuthRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: simpleCognitoIPAuthRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                cognito-identity.amazonaws.com:aud: {"Ref": "IdentityPool"}
+              ForAnyValue:StringLike:
+                cognito-identity.amazonaws.com:amr: authenticated
+      Tags: 
+      - Key: "project"
+        Value: "SimpleHomeAlarm"
+      - Key: "Env"
+        Value: "Test"
+      Policies:
+        - PolicyName: simpleCognitoAuthPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'execute-api:Invoke'
+                Resource:
+                #arn:aws:execute-api:region:account-id:api-id/stage-name/HTTP-VERB/resource-path-specifier
+                  - Fn::Join: [ "", ["arn:aws:execute-api:", {"Ref" : "AWS::Region"}, ":", {"Ref" : "AWS::AccountId"}, ":*/test/*/*"] ]
+  SimpleCognitoUnauthRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: simpleCognitoIPUnauthRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                cognito-identity.amazonaws.com:aud: {"Ref": "IdentityPool"}
+              ForAnyValue:StringLike:
+                cognito-identity.amazonaws.com:amr: authenticated
+      Tags: 
+      - Key: "project"
+        Value: "SimpleHomeAlarm"
+      - Key: "Env"
+        Value: "Test"
+  IdentityPool:
+    Type: 'AWS::Cognito::IdentityPool'
+    Properties:
+      IdentityPoolName: {"Fn::Sub": "${CognitoName}-identity-pool"}
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders: 
+        - ProviderName:
+            Fn::Join: [ "", ["cognito-idp.", {"Ref" : "AWS::Region"}, ".amazonaws.com/", {"Ref": "UserPool"}] ]
+          ClientId: {"Ref": "UserPoolClient"}
+          ServerSideTokenCheck: false
+  IdentityPoolAttachment:
+    Type: 'AWS::Cognito::IdentityPoolRoleAttachment'
+    Properties:
+      IdentityPoolId: {"Ref": "IdentityPool"}
+      Roles: 
+        authenticated: {"Fn::GetAtt": "SimpleCognitoAuthRole.Arn"}
+        unauthenticated: {"Fn::GetAtt": "SimpleCognitoUnauthRole.Arn"}
+
+
+Outputs:
+  UserPoolId:
+    Value: {"Ref": "UserPool"}
+    Export:
+      Name: {"Fn::Sub": "${AWS::StackName}-user-pool-id"}
+  UserPoolArn:
+    Value: {"Fn::GetAtt": "UserPool.Arn"}
+    Export:
+      Name: {"Fn::Sub": "${AWS::StackName}-user-pool-arn"}
+  UserPoolClientId:
+    Value: {"Ref": "UserPoolClient"}
+    Export:
+      Name: {"Fn::Sub": "${AWS::StackName}-user-pool-client-id"}
+
+
+## Env vars
+#AWS_PROFILE=<MY_PROFILE>
+#USERNAME=<MY_USERNAME>
+#PASSWD=<MY_PASSW>
+#REGION=<MY_REGION>
+
+
+## Cli command to publish the stack
+# aws --profile $AWS_PROFILE cloudformation delete-stack --stack-name simple-home-alarm-resources-cognito
+# aws --profile $AWS_PROFILE cloudformation create-stack --stack-name simple-home-alarm-resources-cognito --template-body file://03.cognito.yaml --parameters file://./03.cognito-params.json --capabilities CAPABILITY_NAMED_IAM
+
+#### After creation ####
+
+## Get the UserPool ID#
+# UPID=$(aws --profile $AWS_PROFILE cognito-idp list-user-pools --query "UserPools[?Name == 'simpleCognito-user-pool'].{Id:Id}" --max-results 10 --output text)
+
+## Get the UserPoolClient ID ##
+# UPCID=$(aws --profile $AWS_PROFILE cognito-idp list-user-pool-clients --user-pool-id $UPID --query "UserPoolClients[?ClientName == 'simpleCognito-client'].{Id:ClientId}" --max-results 10 --output text)
+
+# Get the Identity Pool Id
+#IPID=$(aws --profile $AWS_PROFILE cognito-identity list-identity-pools --max-results 10 --query "IdentityPools[?IdentityPoolName == 'simpleCognito-identity-pool'].{Id:IdentityPoolId}" --output text)
+
+# Get the App Client ID
+#CID=$(aws --profile $AWS_PROFILE cognito-idp list-user-pool-clients --user-pool-id $UPID --query "UserPoolClients[].ClientId" --output text)
+
+## create first User
+# aws --profile $AWS_PROFILE cognito-idp admin-create-user --user-pool-id $UPID --username ${USERNAME} --temporary-password "${PASSWD}"
+
+## Change password
+# aws --profile $AWS_PROFILE cognito-idp admin-set-user-password --user-pool-id $UPID --username ${USERNAME} --password "${PASSWD}" --permanent
+
+## Get a token (take the "IdToken" item from the output JSON)
+# aws cognito-idp initiate-auth --region $REGION --auth-flow USER_PASSWORD_AUTH --client-id $UPCID --auth-parameters USERNAME=${USERNAME},PASSWORD="${PASSWD}"
+
